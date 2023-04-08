@@ -88,7 +88,7 @@ async function handleRequest(request) {
 
   // 若已配置登录完成，返回掩盖页面
   if (await Token.get("refresh_token") !== null) {
-    return createHTMLResponse('Hi! This is an online business card application built for Microsoft 365 users.');
+    return createCleanHTMLResponse('Hi! This is an Business Card & Billboard API built for Microsoft 365 users.');
   }
 
   // login路径
@@ -388,6 +388,45 @@ function createHTMLResponse(slot, status = 200) {
       <div class="container w-70">
         <div class="text-center">
           <h5 class="mb-4">Microsoft Graph Login</h5>
+          ${slot}
+        </div>
+      </div>
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
+        crossorigin="anonymous"></script>
+    </html>`, {
+    status: status,
+    headers: {
+      "Content-Type": "text/html"
+    }
+  });
+}
+
+// HTML干净模板返回
+function createCleanHTMLResponse(slot, status = 200) {
+  return new Response(`<!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+      <title>Hello world!</title>
+      <style>
+        html,
+        body {
+          height: 100%
+        }
+        body {
+          display: flex;
+          align-items: center;
+          background-color: #f5f5f5;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container w-70">
+        <div class="text-center">
           ${slot}
         </div>
       </div>
