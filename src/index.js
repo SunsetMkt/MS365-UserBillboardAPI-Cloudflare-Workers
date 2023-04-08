@@ -1,3 +1,4 @@
+// 常量们
 const MS_SCOPE = "offline_access User.Read Files.Read.All Mail.Read MailboxSettings.Read";
 const MS_GRAPH_ROOT = "https://graph.microsoft.com";
 const MS_GRAPH_VER = "1.0";
@@ -12,7 +13,9 @@ const MS_GRAPH_API_LIST = [
   `${MS_GRAPH_ROOT}/v${MS_GRAPH_VER}/me/mailFolders/inbox`,
   `${MS_GRAPH_ROOT}/v${MS_GRAPH_VER}/me/messages`,
 ];
+const MS_GRAPH_API_ME = `${MS_GRAPH_ROOT}/v${MS_GRAPH_VER}/me`;
 
+// 当Fetch
 addEventListener("fetch", (event) => {
   event.respondWith(
     handleRequest(event.request).catch(
@@ -21,11 +24,14 @@ addEventListener("fetch", (event) => {
   );
 });
 
+// 当Scheduled
 addEventListener('scheduled', event => {
   event.waitUntil(handleScheduled(event));
 });
 
+// 请求处理
 async function handleRequest(request) {
+  // 未配置ID或SECRET
   if (typeof MS_CLIENT_ID === "undefined"
     || typeof MS_CLIENT_SECRET === "undefined"
     || typeof MS_REDIRECT_URI === "undefined") {
@@ -34,8 +40,10 @@ async function handleRequest(request) {
     </div>`, 500);
   }
 
+  // 请求路径
   const { pathname } = new URL(request.url);
 
+  // 测试路径，其实不是CRON啦...
   if (typeof CRON_PATH !== "undefined" && pathname.startsWith(CRON_PATH)) {
     await sendMessage("Scheduled start");
     for (let i = 0; i < MS_GRAPH_API_LIST.length; i++) {
@@ -45,21 +53,36 @@ async function handleRequest(request) {
     await sendMessage("Scheduled finish");
   }
 
-  if (await Token.get("refresh_token") !== null) {
-    return fetch("https://welcome.developers.workers.dev");
+  // me路径
+  if (pathname.startsWith("/me")) {
+    // 返回脱敏的用户信息
+    var userInfo = await fetchMSApiReturnJSON(MS_GRAPH_API_ME);
+    var responseDict = { 'displayName': maskString(userInfo['displayName']), 'jobTitle': maskString(userInfo['jobTitle']), 'mail': maskString(userInfo['mail']), 'mobilePhone': maskString(userInfo['mobilePhone']) };
+    var responseStr = JSON.stringify(responseDict);
+
+    return new Response(responseStr, { status: 200 });
   }
 
+  // 若已配置登录完成，返回掩盖页面
+  if (await Token.get("refresh_token") !== null) {
+    return createHTMLResponse('Hi! This is an online business card application built for Microsoft 365 users.');
+  }
+
+  // login路径
   if (pathname.startsWith("/login")) {
     return handleLogin(request);
   }
 
+  // callback路径
   if (pathname.startsWith("/callback")) {
     return handleCallback(request);
   }
 
+  // 若条件都不满足，显示login按钮
   return createHTMLResponse(`<a class="w-50 btn btn-lg btn-primary btn-block" href="/login" role="button">Authorize</a>`);
 }
 
+// 随机测试
 async function handleScheduled(event) {
   await sendMessage("Scheduled start");
   const count = randomInt(2, 10);
@@ -70,6 +93,7 @@ async function handleScheduled(event) {
   await sendMessage("Scheduled finish");
 }
 
+// Telegram发信
 async function sendMessage(message) {
   if (typeof TGBOT_TOKEN === "undefined" || typeof TGBOT_CHAT_ID === "undefined") {
     console.log(message);
@@ -91,7 +115,9 @@ async function sendMessage(message) {
   }
 }
 
+// 登录处理
 async function handleLogin(request) {
+  // 拼接一个登录URL
   const url = new URL("https://login.microsoftonline.com/common/oauth2/v2.0/authorize");
   url.searchParams.append("client_id", MS_CLIENT_ID);
   url.searchParams.append("redirect_uri", MS_REDIRECT_URI);
@@ -100,7 +126,9 @@ async function handleLogin(request) {
   return Response.redirect(url.href);
 }
 
+// Callback处理
 async function handleCallback(request) {
+  // 登录尝试
   const response = await retryFetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
     method: "post",
     headers: {
@@ -145,6 +173,7 @@ async function handleCallback(request) {
   }
 }
 
+// 获取Token
 async function getAccessToken() {
   const accessToken = await Token.get("access_token");
   if (accessToken !== null) {
@@ -183,6 +212,7 @@ async function getAccessToken() {
   return responseJson["access_token"];
 }
 
+// 获取用户信息
 async function getUserInfo(accessToken) {
   const response = await retryFetch("https://graph.microsoft.com/v1.0/me", {
     headers: {
@@ -195,11 +225,13 @@ async function getUserInfo(accessToken) {
   return await response.json();
 }
 
+// 随机Fetch API
 async function randomFetchMSApi() {
   const index = randomInt(0, MS_GRAPH_API_LIST.length);
   return await fetchMSApi(MS_GRAPH_API_LIST[index]);
 }
 
+// Fetch API
 async function fetchMSApi(url) {
   const accessToken = await getAccessToken();
   if (accessToken === null) {
@@ -224,6 +256,34 @@ async function fetchMSApi(url) {
   }
 }
 
+// Fetch API & Return JSON
+async function fetchMSApiReturnJSON(url) {
+  const accessToken = await getAccessToken();
+  if (accessToken === null) {
+    // sendMessage("Not login");
+    return false;
+  }
+
+  try {
+    const response = await retryFetch(url, {
+      method: "get",
+      headers: {
+        "Authorization": "Bearer " + accessToken
+      }
+    });
+    if (response.status === 401) {
+      Token.delete("access_token");
+    }
+    // sendMessage(url + ": " + response.statusText);
+    return await response.json();
+  }
+  catch (e) {
+    // sendMessage(url + ": " + e.message);
+    return false;
+  }
+}
+
+// 随机数字
 function randomInt(min, max) {
   if (min > max) {
     return randomInt(max, min);
@@ -231,10 +291,35 @@ function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min) + min);
 }
 
+// Sleep
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// 脱敏函数
+function maskString(str) {
+  if (str == null) {
+    return null
+  }
+  // 如果输入总长度小于6，全部返回星号
+  if (str.length < 6) {
+    return "*".repeat(str.length);
+  }
+  // 否则，只保留开头和结尾的3个字符串，其他替换为星号
+  else {
+    // 获取开头的3个字符串
+    let start = str.slice(0, 3);
+    // 获取结尾的3个字符串
+    let end = str.slice(-3);
+    // 获取中间的字符串长度
+    let middle = str.length - 6;
+    // 将中间的字符串替换为星号
+    let masked = start + "*".repeat(middle) + end;
+    return masked;
+  }
+}
+
+// 重试
 function retry(fn, times = 3, delay = 1000) {
   return async (...args) => {
     for (let i = 0; i < times; i++) {
@@ -249,10 +334,12 @@ function retry(fn, times = 3, delay = 1000) {
   }
 }
 
+// 重试Fetch
 function retryFetch(url, options) {
   return retry(fetch)(url, options);
 }
 
+// HTML模板返回
 function createHTMLResponse(slot, status = 200) {
   return new Response(`<!DOCTYPE html>
     <html lang="en">
