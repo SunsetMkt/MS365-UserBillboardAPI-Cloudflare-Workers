@@ -54,7 +54,8 @@ async function handleRequest(request) {
     await sendMessage("Test start");
     logging += "Test start" + '\n'
     for (let i = 0; i < MS_GRAPH_API_LIST.length; i++) {
-      logging += await fetchMSApi(MS_GRAPH_API_LIST[i]); + '\n'
+      logging += await fetchMSApi(MS_GRAPH_API_LIST[i]);
+      logging += '\n';
       await sleep(randomInt(1000, 5000));
     }
     await sendMessage("Test finish");
