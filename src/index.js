@@ -55,6 +55,7 @@ async function handleRequest(request) {
       await sleep(randomInt(1000, 5000));
     }
     await sendMessage("Scheduled finish");
+    return new Response("Test over.", { status: 200 });
   }
 
   // ping路径
