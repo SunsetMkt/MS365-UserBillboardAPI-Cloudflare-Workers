@@ -17,6 +17,7 @@ const MS_GRAPH_API_LIST = [
   `${MS_GRAPH_ROOT}/v${MS_GRAPH_VER}/me/messages`,
 ];
 const MS_GRAPH_API_ME = `${MS_GRAPH_ROOT}/v${MS_GRAPH_VER}/me`;
+const MS_GRAPH_API_INBOX = `${MS_GRAPH_ROOT}/v${MS_GRAPH_VER}/me/mailFolders/inbox`;
 
 // 当Fetch
 addEventListener("fetch", (event) => {
@@ -66,6 +67,20 @@ async function handleRequest(request) {
     // 返回脱敏的用户信息
     var userInfo = await fetchMSApiReturnJSON(MS_GRAPH_API_ME);
     var responseDict = { 'displayName': maskString(userInfo['displayName']), 'jobTitle': maskString(userInfo['jobTitle']), 'mail': maskString(userInfo['mail']), 'mobilePhone': maskString(userInfo['mobilePhone']) };
+    var responseStr = JSON.stringify(responseDict);
+
+    return new Response(responseStr, { status: 200 });
+  }
+
+  // unread路径
+  if (pathname.startsWith("/unread")) {
+    // 返回未读邮件数量
+    var resp = await fetchMSApiReturnJSON(MS_GRAPH_API_INBOX + "/messages?$filter=isRead eq false");
+    var count = '0';
+    if (resp['@odata.count']) {
+      count = resp['@odata.count'];
+    }
+    var responseDict = { 'count': count };
     var responseStr = JSON.stringify(responseDict);
 
     return new Response(responseStr, { status: 200 });
