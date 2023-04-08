@@ -56,6 +56,11 @@ async function handleRequest(request) {
     await sendMessage("Scheduled finish");
   }
 
+  // ping路径
+  if (pathname.startsWith("/ping")) {
+    return new Response('pong', { status: 200 });
+  }
+
   // me路径
   if (pathname.startsWith("/me")) {
     // 返回脱敏的用户信息
