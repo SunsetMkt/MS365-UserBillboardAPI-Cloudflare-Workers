@@ -50,13 +50,16 @@ async function handleRequest(request) {
   // 测试路径，其实不是CRON啦...
   // CRON_PATH 或者 test 都可以
   if ((typeof CRON_PATH !== "undefined" && pathname.startsWith(CRON_PATH)) || pathname.startsWith('/test')) {
-    await sendMessage("Scheduled start");
+    var logging = "";
+    await sendMessage("Test start");
+    logging += "Test start" + '\n'
     for (let i = 0; i < MS_GRAPH_API_LIST.length; i++) {
-      await fetchMSApi(MS_GRAPH_API_LIST[i]);
+      logging += await fetchMSApi(MS_GRAPH_API_LIST[i]); + '\n'
       await sleep(randomInt(1000, 5000));
     }
-    await sendMessage("Scheduled finish");
-    return new Response("Test over.", { status: 200 });
+    await sendMessage("Test finish");
+    logging += "Test finish" + '\n'
+    return new Response(logging, { status: 200 });
   }
 
   // ping路径
@@ -257,7 +260,7 @@ async function fetchMSApi(url) {
   const accessToken = await getAccessToken();
   if (accessToken === null) {
     sendMessage("Not login");
-    return;
+    return "Not login";
   }
 
   try {
@@ -271,9 +274,11 @@ async function fetchMSApi(url) {
       Token.delete("access_token");
     }
     sendMessage(url + ": " + response.statusText);
+    return url + ": " + response.statusText;
   }
   catch (e) {
     sendMessage(url + ": " + e.message);
+    return url + ": " + e.message;
   }
 }
 
