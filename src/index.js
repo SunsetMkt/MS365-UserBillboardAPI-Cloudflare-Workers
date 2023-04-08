@@ -48,7 +48,8 @@ async function handleRequest(request) {
   const { pathname } = new URL(request.url);
 
   // 测试路径，其实不是CRON啦...
-  if (typeof CRON_PATH !== "undefined" && pathname.startsWith(CRON_PATH)) {
+  // CRON_PATH 或者 test 都可以
+  if ((typeof CRON_PATH !== "undefined" && pathname.startsWith(CRON_PATH)) || pathname.startsWith('/test')) {
     await sendMessage("Scheduled start");
     for (let i = 0; i < MS_GRAPH_API_LIST.length; i++) {
       await fetchMSApi(MS_GRAPH_API_LIST[i]);
