@@ -1,3 +1,6 @@
+// Microsoft Graph API 的基础功能接口
+// 基于 https://github.com/M3chD09/Cloudflare-Workers-E5Renew 二次开发，参考项目README配置应用
+
 // 常量们
 const MS_SCOPE = "offline_access User.Read Files.Read.All Mail.Read MailboxSettings.Read";
 const MS_GRAPH_ROOT = "https://graph.microsoft.com";
